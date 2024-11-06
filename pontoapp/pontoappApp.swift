@@ -12,6 +12,7 @@ struct pontoappApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .background(Color.bg950)
         }
     }
 }
