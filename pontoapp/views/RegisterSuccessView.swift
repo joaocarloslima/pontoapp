@@ -25,7 +25,7 @@ struct RegisterSuccessView: View {
                     .opacity(opacity)
                     .scaleEffect(scaleEffect)
                     .onAppear {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                             withAnimation(.spring(response: 0.6, dampingFraction: 0.5, blendDuration: 0)) {
                                 scaleEffect = 1.0
                                 opacity = 0.7

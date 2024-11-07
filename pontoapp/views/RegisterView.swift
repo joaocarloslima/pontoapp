@@ -30,6 +30,19 @@ struct RegisterView: View {
                     
                     Spacer()
                     
+                    Text(userOffset.height < 0 ?
+                            "Registrar Presença" :
+                            "Justificar Ausência"
+                        )
+                        .fontWeight(.semibold)
+                        .foregroundColor(userOffset.height < 0 ?
+                                         Color.gradientSuccessStart: .red).opacity(0.7)
+                        .font(.system(size: 30))
+                        .opacity( userOffset.height < 30 ?
+                                  userOffset.height / -maxDragOffset : 1
+                        )
+                    
+                    
                     Image(.apple)
                         .resizable()
                         .frame(width: 100, height: 100)
@@ -42,7 +55,7 @@ struct RegisterView: View {
                         .fill(Gradient(colors: [Color.gradientSuccessEnd, Color.gradientSuccessStart]))
                         .frame(
                             width: 100,
-                            height: (userOffset.height>0) ? 300 + userOffset.height : 300
+                            height: 300
                         )
                         .animation(.spring(), value: userOffset)
                     
@@ -72,7 +85,11 @@ struct RegisterView: View {
                                     }else{
                                         withAnimation(.spring(duration: 1)) {
                                             userOffset = CGSize(width: 0, height: -240)
-                                            showSuccessView = true
+                                            LocalAuthService().authorizeUser { authenticated in
+                                                if authenticated {
+                                                    showSuccessView = true
+                                                }
+                                            }
                                         }
                                         DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
                                             userOffset = .zero
