@@ -10,6 +10,7 @@ import SwiftUI
 struct ContentView: View {
     
     @AppStorage("userId") var userId: String?
+    @ObservedObject var locationManager = LocationManager.shared
     
     private var isSignedIn: Bool {
         return userId != nil
@@ -26,11 +27,14 @@ struct ContentView: View {
     }
     
     var body: some View {
-        
-        if isSignedIn {
-            AppTabBarView()
-        } else {
-            LoginView()
+        Group {
+            if isSignedIn {
+                AppTabBarView()
+            } else if locationManager.userLocation == nil {
+                LocationRequestView()
+            } else {
+                LoginView()
+            }
         }
     }
     
@@ -38,22 +42,27 @@ struct ContentView: View {
 
 struct AppTabBarView: View {
     var body: some View {
-        TabView{
-            Tab("Registrar", systemImage: "person.fill.checkmark"){
+            TabView {
                 RegisterView()
-            }
-            Tab("Dashboard", systemImage: "rectangle.3.offgrid"){
-                //
-            }
-            Tab("Configurações", systemImage: "slider.horizontal.3"){
+                    .tabItem {
+                        Image(systemName: "person.fill.checkmark")
+                        Text("Registrar")
+                    }
+
+                Text("Dashboard")
+                    .tabItem {
+                        Image(systemName: "rectangle.3.offgrid")
+                        Text("Dashboard")
+                    }
+
                 SettingsView()
+                    .tabItem {
+                        Image(systemName: "slider.horizontal.3")
+                        Text("Configurações")
+                    }
             }
+            .accentColor(Color.gradientStart)
         }
-        .tint(Color.gradientStart)
-        .toolbarBackground(Color.bg900, for: .tabBar)
-        .toolbarBackground(.visible, for: .tabBar)
-        
-    }
 }
 
 

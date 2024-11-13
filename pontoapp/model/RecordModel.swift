@@ -7,11 +7,11 @@
 
 import Foundation
 
-struct RecordModel: Identifiable, Decodable {
-    var id: String
-    var userId: String
-    var latitude: Double
-    var longitude: Double
-    var date: Date
+struct RecordModel: Codable{
+    var id: String = ""
+    var userId: String = ""
+    var latitude: Double = 0
+    var longitude: Double = 0
+    var date: Date = Date()
     
 }

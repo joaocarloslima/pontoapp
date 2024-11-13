@@ -7,20 +7,25 @@
 
 import SwiftUI
 
-struct RegisterSuccessView: View {
+struct LocationRequestView: View {
     @Environment(\.dismiss) var dismiss
     
     @State private var scaleEffect: CGFloat = 0.5
     @State private var opacity: Double = 0.0
     
+    @ObservedObject var locationManager = LocationManager.shared
+    
     var body: some View {
-        GeometryReader { geometry in
+        ZStack {
+            Color.bg950.ignoresSafeArea()
+            
             VStack{
                 
                 Spacer()
                 
-                Image(systemName: "checkmark.circle.fill")
+                Image(systemName: "location.circle.fill")
                     .resizable()
+                    .foregroundColor(.white.opacity(0.9))
                     .frame(width: 100, height: 100)
                     .opacity(opacity)
                     .scaleEffect(scaleEffect)
@@ -28,42 +33,62 @@ struct RegisterSuccessView: View {
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                             withAnimation(.spring(response: 0.6, dampingFraction: 0.5, blendDuration: 0)) {
                                 scaleEffect = 1.0
-                                opacity = 0.7
+                                opacity = 0.9
                             }
                         }
                     }
                 
                 
-                Text("Presença registrada com sucesso")
+                Text($locationManager.permissionDenied.wrappedValue ?
+                        "Acesse as configurações para permitir o uso da localização" :
+                        "Vamos precisar da sua localização para continuar")
                     .font(.system(size: 30))
                     .fontWeight(.semibold)
-                    .foregroundColor(.black.opacity(0.7))
+                    .foregroundColor(.white.opacity(0.9))
                     .multilineTextAlignment(.center)
+                
+                Text("Suas coordenadas serão utilizadas para registrar a sua presença")
+                    .font(.system(size: 20))
+                    .fontWeight(.semibold)
+                    .foregroundColor(.white.opacity(0.7))
+                    .multilineTextAlignment(.center)
+                    .padding()
                 
                 Spacer()
                 
-                Button(action: {
-                    dismiss()
-                }) {
-                    Text("OK")
-                        .font(.system(size: 20))
-                        .fontWeight(.semibold)
-                        .foregroundColor(.white.opacity(0.8))
-                        .padding()
-                        .frame(width: geometry.size.width - 80)
-                        .background(.black.opacity(0.7))
-                        .cornerRadius(10)
+                if(!$locationManager.permissionDenied.wrappedValue) {
+                    Button(action: {
+                        LocationManager.shared.requestLocation()
+                    }) {
+                        Text("Permitir")
+                            .font(.system(size: 20))
+                            .fontWeight(.semibold)
+                            .foregroundColor(.black)
+                            .padding()
+                            .frame(width: UIScreen.main.bounds.width - 80)
+                            .background(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [
+                                        Color.gradientStart,
+                                        Color.gradientEnd
+                                    ]),
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .cornerRadius(10)
+                    }
                 }
                 
                 
                 
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color.gradientSuccessStart)
+            
+
         }
     }
 }
 
 #Preview {
-    RegisterSuccessView()
+    LocationRequestView()
 }

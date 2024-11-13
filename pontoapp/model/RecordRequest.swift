@@ -6,3 +6,10 @@
 //
 
 import Foundation
+
+struct RecordRequest: Encodable {
+    var userId: String
+    var latitude: Double
+    var longitude: Double
+}
+

@@ -14,7 +14,9 @@ struct RegisterSuccessView: View {
     @State private var opacity: Double = 0.0
     
     var body: some View {
-        GeometryReader { geometry in
+        ZStack {
+            Color.gradientSuccessStart.ignoresSafeArea()
+            
             VStack{
                 
                 Spacer()
@@ -49,17 +51,17 @@ struct RegisterSuccessView: View {
                         .font(.system(size: 20))
                         .fontWeight(.semibold)
                         .foregroundColor(.white.opacity(0.8))
+                        .frame(width: UIScreen.main.bounds.width - 80)
                         .padding()
-                        .frame(width: geometry.size.width - 80)
                         .background(.black.opacity(0.7))
                         .cornerRadius(10)
                 }
                 
                 
                 
+                
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color.gradientSuccessStart)
+            
         }
     }
 }

@@ -9,6 +9,9 @@ import SwiftUI
 import AuthenticationServices
 
 struct LoginView: View {
+    
+    @State private var errorMessage = ""
+    
     var body: some View {
         VStack{
             Text("Apple Academy")
@@ -30,17 +33,24 @@ struct LoginView: View {
                 .multilineTextAlignment(.center)
             
             Spacer()
-            SignButtonView()
+            
+            Text(errorMessage)
+                .foregroundColor(.red)
+                .padding()
+            
+            SignButtonView(errorMessage: $errorMessage)
         }
         .background(Color.bg950)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
-struct SignButtonView: View {
+struct SignButtonView : View {
     @AppStorage("userId") var userId: String?
     @AppStorage("email") var email: String?
     @AppStorage("name") var name: String?
+    
+    @Binding var errorMessage: String
     
     var body: some View {
         
@@ -69,7 +79,9 @@ struct SignButtonView: View {
                     
                     
                 case .failure(let error):
-                    print("Authorization failed: " + error.localizedDescription)
+                    errorMessage = "Erro ao realizar o login. Tente novamente. \(error.localizedDescription)"
+                
+                    
             }
             
                 
@@ -77,9 +89,6 @@ struct SignButtonView: View {
         .signInWithAppleButtonStyle(.white)
         .frame(height: 50)
         .padding()
-        
-
-            
         
     }
         
