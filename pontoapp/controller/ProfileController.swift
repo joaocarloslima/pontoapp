@@ -21,7 +21,7 @@ class ProfileController: NSObject, ObservableObject {
         guard let item = selectedImage else { return }
         guard let imageData = try await item.loadTransferable(type: Data.self) else { return }
         guard let image = UIImage(data: imageData) else { return }
-        DispatchQueue.main.async {
+        await MainActor.run {
             self.profileImage = Image(uiImage: image)
         }
     }
@@ -29,3 +29,4 @@ class ProfileController: NSObject, ObservableObject {
     
     
 }
+

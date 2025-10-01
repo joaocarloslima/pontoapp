@@ -10,7 +10,7 @@ import Foundation
 class WebService: ObservableObject {
     
     func postRecord(latitude: Double, longitude: Double, userId: String, completion: @escaping (Result<Bool, Error>) -> Void) {
-        guard let url = URL(string: "http://apppontoapi-production.up.railway.app/records") else {
+        guard let url = URL(string: "https://api.developeracademy.tech/timelog") else {
             completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "URL inválida"])))
             return
         }
@@ -22,6 +22,7 @@ class WebService: ObservableObject {
         let body: [String: Any] = [
             "latitude": latitude,
             "longitude": longitude,
+            "studentId": "7788bf9a-8697-41e4-857f-a827a4eb9530",
             "userId": userId
         ]
         
