@@ -12,6 +12,7 @@ struct RegisterView: View {
     @AppStorage("userId") var userId: String?
     
     @State private var userOffset: CGSize = .zero
+    @State private var justifyAbstence: Bool = false
     @State private var showSuccessView = false
     @ObservedObject var locationManager = LocationManager.shared
     @StateObject var profileController = ProfileController()
@@ -91,7 +92,11 @@ struct RegisterView: View {
                             }
                             .onEnded { value in
                                 let newOffset = value.translation.height * -1
+                                print(newOffset)
+
                                 if (newOffset <= maxDragOffset - 50){
+                                
+                                    justifyAbstence = true
                                     withAnimation(.spring()) {
                                         userOffset = .zero
                                     }
@@ -117,10 +122,10 @@ struct RegisterView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color.bg950)
-                
-               
             
-            
+        }
+        .navigationDestination(isPresented: $justifyAbstence){
+            JustifyAbstenceView()
         }
         .fullScreenCover(isPresented: $showSuccessView) {
             RegisterSuccessView()
