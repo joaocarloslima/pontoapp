@@ -42,27 +42,29 @@ struct ContentView: View {
 
 struct AppTabBarView: View {
     var body: some View {
-            TabView {
+        TabView {
+            NavigationStack{
                 RegisterView()
-                    .tabItem {
-                        Image(systemName: "person.fill.checkmark")
-                        Text("Registrar")
-                    }
-
-                Text("Dashboard")
-                    .tabItem {
-                        Image(systemName: "rectangle.3.offgrid")
-                        Text("Dashboard")
-                    }
-
-                SettingsView()
-                    .tabItem {
-                        Image(systemName: "slider.horizontal.3")
-                        Text("Configurações")
-                    }
             }
-            .accentColor(Color.gradientStart)
+            .tabItem {
+                Image(systemName: "person.fill.checkmark")
+                Text("Registrar")
+            }
+            
+            Text("Dashboard")
+                .tabItem {
+                    Image(systemName: "rectangle.3.offgrid")
+                    Text("Dashboard")
+                }
+            
+            SettingsView()
+                .tabItem {
+                    Image(systemName: "slider.horizontal.3")
+                    Text("Configurações")
+                }
         }
+        .accentColor(Color.gradientStart)
+    }
 }
 
 
