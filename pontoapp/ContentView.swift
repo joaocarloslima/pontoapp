@@ -45,13 +45,13 @@ struct AppTabBarView: View {
         TabView {
             NavigationStack{
                 RegisterView()
-            }
-            .tabItem {
-                Image(systemName: "person.fill.checkmark")
-                Text("Registrar")
+                    .tabItem {
+                        Image(systemName: "person.fill.checkmark")
+                        Text("Registrar")
+                    }
             }
             
-            Text("Dashboard")
+            DashboardView()
                 .tabItem {
                     Image(systemName: "rectangle.3.offgrid")
                     Text("Dashboard")
@@ -63,6 +63,7 @@ struct AppTabBarView: View {
                     Text("Configurações")
                 }
         }
+        
         .accentColor(Color.gradientStart)
     }
 }

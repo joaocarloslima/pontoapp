@@ -11,11 +11,17 @@ import PhotosUI
 struct SettingsView: View {
     @AppStorage("name") var name: String?
     @AppStorage("userId") var userId: String?
+    @AppStorage("studentId") private var studentId: String = ""
+    @FocusState private var isTextFieldFocused: Bool
     @StateObject var profileController = ProfileController()
+    
 
     var body: some View {
                 
             VStack{
+                Text("Configurações")
+                        .font(.largeTitle)
+                
                 VStack{
                     PhotosPicker(selection: $profileController.selectedImage){
                         if let profileImage = $profileController.profileImage.wrappedValue {
@@ -34,23 +40,34 @@ struct SettingsView: View {
                         
                     
                     Text(name ?? "Usuário Logado")
-                        .font(.system(size: 30))
+                        .font(.system(size: 20))
                         .fontWeight(.semibold)
                         .foregroundColor(.white.opacity(0.9))
                 }
                 
-                List{
-                    Section{
-                        Button("Sair do App") {
-                            userId = nil
-                        }
-                        .foregroundColor(.red)
-                        .padding(8)
-                    }
-                }
+            TextField("Digite seu Student ID", text: $studentId)
+               .textFieldStyle(.roundedBorder)
+               .focused($isTextFieldFocused)
+               .padding()
+            
+            if !studentId.isEmpty {
+                Text("ID salvo: \(studentId)")
+                    .foregroundColor(.green)
+            }
+            
+            Button("Sair do App") {
+                userId = nil
+            }
+            .foregroundColor(.red)
+            .padding(8)
+        
+                Spacer()
                 
             }
             .preferredColorScheme(.dark)
+            .onTapGesture {
+                isTextFieldFocused = false
+            }
         
     }
 }
