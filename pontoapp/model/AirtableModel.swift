@@ -1,0 +1,57 @@
+//
+//  AirtableModel.swift
+//  pontoapp
+//
+//  Created by Joao Carlos Lima on 26/11/25.
+//
+
+import Foundation
+
+struct AirtableResponse: Codable {
+    let records: [Event]
+}
+
+struct Event: Codable, Identifiable {
+    let id: String
+    let fields: EventFields
+    let createdTime: String
+}
+
+
+struct EventFields: Codable {
+    let name: String
+    let date: String
+    let icon: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case name = "Name"
+        case date = "Datetime"
+        case icon = "Icon"
+    }
+    
+    var eventDate: Date? {
+        let fixedDateString = date.replacingOccurrences(of: ":000Z", with: ".000Z")
+        
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        
+        if let parsedDate = formatter.date(from: fixedDateString) {
+            return parsedDate
+        }
+        
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.date(from: fixedDateString)
+    }
+    
+    var formattedDate: String {
+        guard let eventDate = eventDate else {
+            print("Erro ao converter data:", date)
+            return date
+        }
+        
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "pt_BR")
+        formatter.dateFormat = "EEE, dd/MM - HH:mm"
+        return formatter.string(from: eventDate)
+    }
+}
