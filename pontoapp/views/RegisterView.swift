@@ -100,7 +100,7 @@ struct RegisterView: View {
                                     withAnimation(.spring()) {
                                         userOffset = .zero
                                     }
-                                }else{
+                                } else{
                                     withAnimation(.spring(duration: 1)) {
                                         userOffset = CGSize(width: 0, height: -240)
                                         LocalAuthService().authorizeUser { authenticated in
