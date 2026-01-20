@@ -22,6 +22,23 @@ extension Date {
         return formatter.string(from: self)
     }
     
+    static func getCurrentMinutes() -> Int{
+        let time = Date()
+        let calendar = Calendar.current
+        let hour = calendar.component(.hour, from: time)
+        let minute = calendar.component(.minute, from: time)
+        return hour * 60 + minute
+    }
+
+    
+    static func dateTimeNow() -> String {
+        let formatterDate = ISO8601DateFormatter()
+        
+        formatterDate.formatOptions = [.withInternetDateTime]
+        
+        return formatterDate.string(from: Date.now)
+    }
+    
     func daysOfMonth() -> [DateValue] {
         let calendar = Calendar.current
 

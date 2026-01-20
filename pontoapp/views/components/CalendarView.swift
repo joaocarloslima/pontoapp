@@ -70,7 +70,7 @@ struct CalendarView: View {
             
             let columns = Array(repeating: GridItem(.flexible()), count: 7)
             
-            LazyVGrid(columns: columns, spacing: 15){
+            LazyVGrid(columns: columns, spacing: 2){
                 ForEach(currentDate.daysOfMonth()){ value in
                     if value.day != -1{
                         let isToday = Calendar.current.isDateInToday(value.date)

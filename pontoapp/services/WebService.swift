@@ -12,14 +12,14 @@ class WebService: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
     
-    let apiKey = ProcessInfo.processInfo.environment["AIRTABLE_TOKEN"] ?? ""
+    let apiKey = Bundle.main.object(forInfoDictionaryKey: "AirtableToken") as? String ?? ""
     
-    func postRecord(latitude: Double, longitude: Double, studentId: String, completion: @escaping (Result<Bool, Error>) -> Void) {
+    func postRecord(record: RecordModel, completion: @escaping (Result<Bool, Error>) -> Void) {
         guard let url = URL(string: "https://api.airtable.com/v0/app4Cut7Wu9GESQDL/tblkNzlaXHa3x5SVr") else {
             completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "URL inválida"])))
             return
         }
-
+        
         var request = URLRequest(url: url)
         
         request.httpMethod = "POST"
@@ -27,12 +27,29 @@ class WebService: ObservableObject {
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
 
         
+        var fields: [String: Any] = [
+            "latitude": record.latitude,
+            "longitude": record.longitude,
+            "student": [record.studentId],
+            "datetime": Date.dateTimeNow(),
+            "Status": record.status.rawValue
+        ]
+        
+        if let justifyText = record.justifyText, !justifyText.isEmpty {
+            fields["Justify"] = justifyText
+        }
+        
+        if let files = record.filesURL, !files.isEmpty {
+            let attachmentsArray = files.map { url in
+                return ["url": url]
+            }
+            
+            fields["Attach"] = attachmentsArray
+        }
+        
         let body: [String: Any] = [
-            "fields": [
-                "latitude": latitude,
-                "longitude": longitude,
-                "student": [studentId]
-            ]
+            "fields": fields,
+            "typecast": true
         ]
         
         do {
@@ -48,10 +65,23 @@ class WebService: ObservableObject {
                 return
             }
 
-            //print(response!)
-            
-            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            guard let httpResponse = response as? HTTPURLResponse else {
                 completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Resposta inválida do servidor"])))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                if let data = data, let jsonErro = try? JSONSerialization.jsonObject(with: data, options: []) {
+                    print("ERRO DO AIRTABLE: \(jsonErro)")
+                }
+                
+                let erro = NSError(
+                    domain: "APIError",
+                    code: httpResponse.statusCode,
+                    userInfo: [NSLocalizedDescriptionKey: "Erro no servidor. Status \(httpResponse.statusCode)"]
+                )
+                
+                completion(.failure(erro))
                 return
             }
             
