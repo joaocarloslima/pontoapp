@@ -2,19 +2,15 @@ import SwiftUI
 
 struct RegisterView: View {
     
-    @AppStorage("studentId") private var studentId: String = ""
+    @AppStorage("studentId") private var studentId: String = "k"
     
-    @State private var userOffset: CGSize = .zero
     @State private var justifyAbstence: Bool = false
-    @State private var showSuccessView = false
+    @State private var justifyLate: Bool = false
     @State private var showSettings = false
     
-    @State private var showError = false
-    @State private var errorMessage: String?
-    
+    @StateObject private var viewModel = RegistrationViewModel()
     @ObservedObject var locationManager = LocationManager.shared
     @StateObject var profileController = ProfileController()
-    @StateObject var web = WebService()
     
     private var profileImage: Image? {
         if let profileImage = profileController.profileImage {
@@ -24,7 +20,7 @@ struct RegisterView: View {
         }
     }
     
-    private let maxDragOffset: CGFloat = 250
+    private let maxDragOffset: CGFloat = 150
     
     var body: some View {
         if studentId.isEmpty {
@@ -37,18 +33,37 @@ struct RegisterView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color.bg950)
             }
-            
-            
+            .navigationDestination(isPresented: $justifyLate){
+                JustifyView(titleText: "Justificar Atraso", subtitleText: "MOTIVO DE SEU ATRASO"){ text, files in
+                    
+                    viewModel.registerEvent(
+                        studentId: studentId,
+                        status: .lated,
+                        location: locationManager.userLocation,
+                        justifyText: text,
+                        files: files
+                    )
+                    justifyLate = false                }
+            }
             .navigationDestination(isPresented: $justifyAbstence){
-                JustifyAbstenceView()
+                JustifyView(titleText: "Justificar Ausência", subtitleText: "MOTIVO DA SUA AUSÊNCIA"){ text, files in
+                    viewModel.registerEvent(
+                        studentId: studentId,
+                        status: .absent,
+                        location: locationManager.userLocation,
+                        justifyText: text,
+                        files: files
+                    )
+                    justifyAbstence = false
+                }
             }
-            .fullScreenCover(isPresented: $showSuccessView) {
-                RegisterSuccessView()
+            .fullScreenCover(isPresented: $viewModel.showSuccess) {
+                RegisterSuccessView(text: viewModel.successMessage)
             }
-            .alert("Erro", isPresented: $showError) {
+            .alert("Erro", isPresented: $viewModel.showError) {
                 Button("OK", role: .cancel) { }
             } message: {
-                Text(errorMessage ?? "Ocorreu um erro inesperado")
+                Text(viewModel.errorMessage ?? "Ocorreu um erro inesperado")
             }
         }
     }
@@ -67,80 +82,34 @@ struct RegisterView: View {
             
             Spacer()
             
-            Text(userOffset.height < 0 ?
-                 "Registrar Presença" :
-                    "Justificar Ausência"
-            )
-            .fontWeight(.semibold)
-            .foregroundColor(userOffset.height < 0 ?
-                             Color.gradientSuccessStart: .red).opacity(0.7)
-                .font(.system(size: 30))
-                .opacity( userOffset.height < 30 ?
-                          userOffset.height / -maxDragOffset : 1
-                )
+            CalendarView(){ _ in
+                
+            }
             
+            Spacer()
             
-            Image(.apple)
-                .resizable()
-                .frame(width: 100, height: 100)
-                .clipShape(Circle())
-                .overlay(Circle().stroke(Color.white, lineWidth: 4))
-                .padding(.bottom, -100)
-                .zIndex(10)
-            
-            RoundedRectangle(cornerRadius: 50)
-                .fill(Gradient(colors: [Color.gradientSuccessEnd, Color.gradientSuccessStart]))
-                .frame(
-                    width: 100,
-                    height: 300
-                )
-                .animation(.spring(), value: userOffset)
-            
-            profileImage?
-                .resizable()
-                .frame(width: 100, height: 100)
-                .clipShape(Circle())
-                .overlay(Circle().stroke(Color.white, lineWidth: 4))
-                .foregroundStyle(.white)
-                .padding(.top, -110)
-                .offset(y: userOffset.height)
-                .gesture(
-                    DragGesture()
-                        .onChanged { value in
-                            let newOffset = value.translation.height
-                            if newOffset >= -maxDragOffset{
-                                withAnimation(.spring()) {
-                                    userOffset = value.translation
-                                }
+            if isChekcInWindowOpen() {
+                PresenceSlider(profileImage: profileImage, onSwipeRight: {
+                    LocalAuthService().authorizeUser { authenticated in
+                        if authenticated {
+                            if isOnTime() {
+                                viewModel.registerEvent(
+                                    studentId: studentId,
+                                    status: .present,
+                                    location: locationManager.userLocation
+                                )
+                            } else {
+                                justifyLate = true
                             }
                         }
-                        .onEnded { value in
-                            let newOffset = value.translation.height * -1
-                            print(newOffset)
-                            
-                            if (newOffset <= maxDragOffset - 50){
-                                
-                                justifyAbstence = true
-                                withAnimation(.spring()) {
-                                    userOffset = .zero
-                                }
-                            }else{
-                                withAnimation(.spring(duration: 1)) {
-                                    userOffset = CGSize(width: 0, height: -240)
-                                    LocalAuthService().authorizeUser { authenticated in
-                                        if authenticated {
-                                            handleRegister()
-                                            showSuccessView = true
-                                            
-                                        }
-                                    }
-                                }
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-                                    userOffset = .zero
-                                }
-                            }
-                        }
-                )
+                    }
+                    
+                }, onSwipeLeft: {
+                    justifyAbstence = true
+                })
+            } else {
+                CardCheckInWindowClosedView()
+            }
             
             Spacer()
             
@@ -177,33 +146,20 @@ struct RegisterView: View {
             SettingsView()
         }
     }
+        
+    func isOnTime() -> Bool {
+        //limite é 14:10
+        let endMinutes: Int = 14 * 60 + 10
+        return Date.getCurrentMinutes() <= endMinutes
+    }
     
-    
-    
-    func handleRegister() {
-        print("Registrando presença")
-        if let location = locationManager.userLocation {
-            let latitude = location.coordinate.latitude
-            let longitude = location.coordinate.longitude
-            
-            web.postRecord(
-                latitude: latitude,
-                longitude: longitude,
-                studentId: studentId
-            ) { result in
-                DispatchQueue.main.async {
-                    switch result {
-                    case .success:
-                        print("Presença registrada com sucesso!")
-                        showSuccessView = true
-                    case .failure(let error):
-                        errorMessage = error.localizedDescription
-                        showError.toggle()
-                        print("Erro ao registrar presença: \(error.localizedDescription)")
-                    }
-                }
-            }
-        }
+    func isChekcInWindowOpen() -> Bool {
+        let beginMinutes: Int = 13 * 60 + 30
+        let endMinutes: Int = 18 * 60
+        
+        let nowMinutes = Date.getCurrentMinutes()
+
+        return nowMinutes >= beginMinutes && nowMinutes < endMinutes
     }
     
 }

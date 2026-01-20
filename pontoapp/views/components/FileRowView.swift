@@ -15,7 +15,8 @@ struct FileRowView: View {
     var body: some View {
         HStack(alignment: .center) {
             Spacer()
-            Image(systemName: "doc.fill")                .foregroundStyle(gradientColors)
+            Image(systemName: "doc.fill")
+                .foregroundStyle(gradientColors)
                 .font(.title3)
             
             VStack(alignment: .leading) {

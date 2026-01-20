@@ -12,6 +12,7 @@ struct RegisterSuccessView: View {
     
     @State private var scaleEffect: CGFloat = 0.5
     @State private var opacity: Double = 0.0
+    @State var text: String
     
     var body: some View {
         ZStack {
@@ -36,7 +37,7 @@ struct RegisterSuccessView: View {
                     }
                 
                 
-                Text("Presença registrada com sucesso")
+                Text(text)
                     .font(.system(size: 30))
                     .fontWeight(.semibold)
                     .foregroundColor(.black.opacity(0.7))
@@ -67,5 +68,5 @@ struct RegisterSuccessView: View {
 }
 
 #Preview {
-    RegisterSuccessView()
+    RegisterSuccessView(text: "Presença registrada com sucesso!")
 }
