@@ -2,9 +2,19 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Precisamos usar a sua localização para registrar o ponto</string>
-	<key>NSFaceIDUsageDescription</key>
-	<string>Precisamos confirmar sua identidade para executar algumas ações</string>
+	<key>AIrtableToken</key>
+	<string>$(AIRTABLE_TOKEN)</string>
+	<key>DropboxAcessToken</key>
+	<string>$(DROPBOX_ACESS_TOKEN )</string>
+	<key>DropboxAppSecret</key>
+	<string>$(DROPBOX_APP_SECRET)</string>
+	<key>DropboxKey</key>
+	<string>$(DROPBOX_API_KEY)</string>
+	<key>DropboxRefreshToken</key>
+	<string>$(DROPBOX_REFRESH_TOKEN)</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+	</array>
 </dict>
 </plist>

@@ -7,21 +7,28 @@
 
 import SwiftUI
 
-struct JustifyAbstenceView: View {
+struct JustifyView: View {
+    @State var titleText: String
+    @State var subtitleText: String
+    
     @State private var isImporting: Bool = false
     @State var text: String = ""
+    
     let gradientColors: LinearGradient = LinearGradient(gradient: Gradient(colors: [.gradientStart, .gradientEnd]), startPoint: .leading, endPoint: .trailing)
     @State var selectedFiles: [URL] = []
+    
+    var sendJustify: (String, [URL]) -> Void
+    
     @FocusState private var isFocused: Bool
     
     var body: some View {
         VStack(spacing: 25){
-            Text("Justificar Ausência")
+            Text(titleText)
                 .font(.largeTitle.bold())
                 .foregroundStyle(.white)
             
             VStack(alignment: .leading, spacing: 15){
-                Text("MOTIVO DA SUA AUSÊNCIA")
+                Text(subtitleText)
                     .font(.headline.bold())
                     .foregroundStyle(.white.opacity(0.6))
                     .padding(.horizontal, 20)
@@ -79,11 +86,7 @@ struct JustifyAbstenceView: View {
             Spacer()
             
             Button {
-                //TODO: Enviar arquivos e dados para o backend
-                //usar URL.startAccessingSecurityScopedResource()
-                //quando for implementar, para garantir que
-                //acessamos o arquivo e ao finalizar, fechar com o
-                //URL.stopAccessingSecurityScopedResource()
+                sendJustify(text, selectedFiles)
             } label: {
                 HStack(){
                     Image(systemName: "person.fill.checkmark")
@@ -104,11 +107,11 @@ struct JustifyAbstenceView: View {
                 isFocused = true
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(.bg950)
         .onTapGesture {
             isFocused = false
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(.bg950)
         .fileImporter(isPresented: $isImporting, allowedContentTypes: [.pdf, .image, .png, .jpeg, .text], allowsMultipleSelection: true){
             result in
             
@@ -128,7 +131,7 @@ struct JustifyAbstenceView: View {
     
     func removeFile(_ url: URL) {
         if let index = selectedFiles.firstIndex(of: url) {
-            withAnimation {
+            _ = withAnimation {
                 selectedFiles.remove(at: index)
             }
         }
@@ -136,5 +139,8 @@ struct JustifyAbstenceView: View {
 }
 
 #Preview {
-    JustifyAbstenceView(text: "Placeholder", selectedFiles: [URL(filePath: "alguma coisa"), URL(filePath: "alguma coisa"), URL(filePath: "alguma coisa")])
+    JustifyView(titleText: "Justificar Ausência", subtitleText: "MOTIVO DA SUA AUSÊNCIA", text: "Placeholder", selectedFiles: [URL(filePath: "alguma coisa"), URL(filePath: "alguma coisa"), URL(filePath: "alguma coisa")]){ text, file in
+        
+    }
 }
+

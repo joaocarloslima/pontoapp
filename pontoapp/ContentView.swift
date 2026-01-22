@@ -45,10 +45,10 @@ struct AppTabBarView: View {
         TabView {
             NavigationStack{
                 RegisterView()
-                    .tabItem {
-                        Image(systemName: "person.fill.checkmark")
-                        Text("Registrar")
-                    }
+            }
+            .tabItem {
+                Image(systemName: "person.fill.checkmark")
+                Text("Registrar")
             }
             
             DashboardView()

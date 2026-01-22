@@ -7,11 +7,26 @@
 
 import Foundation
 
+enum RecordStatus: String, Codable {
+    case lated = "Lated"
+    case present = "Present"
+    case absent = "Absent"
+}
+
 struct RecordModel: Codable{
-    var id: String = ""
-    var userId: String = ""
-    var latitude: Double = 0
-    var longitude: Double = 0
-    var date: Date = Date()
+    var studentId: String
+    var latitude: Double
+    var longitude: Double
+    var status: RecordStatus
+    var filesURL: [String]?
+    var justifyText: String?
     
+    init(studentId: String, latitude: Double, longitude: Double, status: RecordStatus, filesURL: [String]? = nil, justifyText: String? = nil) {
+        self.studentId = studentId
+        self.latitude = latitude
+        self.longitude = longitude
+        self.status = status
+        self.filesURL = filesURL
+        self.justifyText = justifyText
+    }
 }
