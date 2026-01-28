@@ -80,6 +80,21 @@ class RegistrationViewModel: ObservableObject {
         }
     }
     
+    func getCalendarInfos(month: Int, year: Int){
+        webService.fetchCalendar(student: "", month: month, year: year) { [weak self] result in
+            self?.isLoading = false
+            
+            switch result {
+            case .success(let dados):
+                print("----- DUMP -----")
+                dump(dados)
+            case .failure(let error):
+                self?.errorMessage = error.localizedDescription
+                self?.showError = true
+            }
+        }
+    }
+    
     func sendToAirtable(studentId: String, status: RecordStatus, location: CLLocation, justifyText: String?, fileLinks: [String]?){
         
         let record = RecordModel(

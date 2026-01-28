@@ -25,7 +25,6 @@ class WebService: ObservableObject {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
-
         
         var fields: [String: Any] = [
             "latitude": record.latitude,
@@ -87,6 +86,34 @@ class WebService: ObservableObject {
             
             completion(.success(true))
         }.resume()
+    }
+    
+    func fetchCalendar(student: String, month: Int, year: Int, completion: @escaping (Result<[Event], Error>) -> Void) {
+        let baseURL = "https://api.airtable.com/v0/app4Cut7Wu9GESQDL/Timelog"
+        var components = URLComponents(string: baseURL)
+        
+        components?.queryItems = [
+            URLQueryItem(name: "filterByFormula",value: "AND(SEARCH('\(student)',{student}),MONTH({datetime}) = \(month), YEAR({datetime}) = \(year))")
+        ]
+        
+        guard let url = components?.url else {
+            let error = NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "URL inválida"])
+            completion(.failure(error))
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            if let data = data {
+                if let jsonString = String(data: data, encoding: .utf8) {
+                    print("Resposta: \(jsonString)")
+                }
+            }
+        }
+        task.resume()
     }
     
     func fetchEvents(completion: @escaping (Result<[Event], Error>) -> Void) {

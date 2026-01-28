@@ -13,7 +13,9 @@ struct CalendarView: View {
     
     let daysWithPoint: [Int] = [1, 2, 3, 4, 5, 8, 9, 10, 11, 12]
     
-    var onDateSelected: ((Date) -> Void)
+    //var onDateSelected: ((Date) -> Void)
+    
+    var seeRecords: ((_ month: Int, _ year: Int) -> Void)
     
     var body: some View {
         VStack(spacing: 20){
@@ -36,6 +38,7 @@ struct CalendarView: View {
                     Button {
                         withAnimation(.easeInOut){
                             changeMonth(by: -1)
+                            seeRecords(currentDate.month, currentDate.year)
                         }
                     } label: {
                         Image(systemName: "chevron.left")
@@ -100,7 +103,7 @@ struct CalendarView: View {
                                 self.selectedDate = value.date
                             }
                             
-                            onDateSelected(value.date)
+                            //onDateSelected(value.date)
                         }
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                     } else {
@@ -134,7 +137,7 @@ struct CalendarView: View {
 }
 
 #Preview {
-    CalendarView(){ _ in
+    CalendarView(){ _, _ in
         
     }
 }

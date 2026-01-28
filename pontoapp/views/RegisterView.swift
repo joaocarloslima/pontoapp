@@ -82,8 +82,8 @@ struct RegisterView: View {
             
             Spacer()
             
-            CalendarView(){ _ in
-                
+            CalendarView(){ month, year in
+                viewModel.getCalendarInfos(month: month, year: year)
             }
             
             Spacer()
@@ -155,7 +155,7 @@ struct RegisterView: View {
     
     func isChekcInWindowOpen() -> Bool {
         let beginMinutes: Int = 13 * 60 + 30
-        let endMinutes: Int = 18 * 60
+        let endMinutes: Int = 17 * 60
         
         let nowMinutes = Date.getCurrentMinutes()
 
