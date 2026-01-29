@@ -14,6 +14,10 @@ struct DateValue: Identifiable{
 }
 
 extension Date {
+    var day: Int {
+        return Calendar.current.component(.day, from: self)
+    }
+    
     var year: Int {
         return Calendar.current.component(.year, from: self)
     }

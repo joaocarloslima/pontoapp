@@ -1,23 +1,23 @@
 //
-//  CardCheckInWindowOpenView.swift
+//  CardCheckedInView.swift
 //  pontoapp
 //
-//  Created by Erick Costa on 20/01/26.
+//  Created by Erick Costa on 28/01/26.
 //
 
 import SwiftUI
 
-struct CardCheckInWindowClosedView: View {
+struct CardCheckedInView: View {
     var body: some View {
         VStack(alignment: .center, spacing: 15) {
-            Image(systemName: "clock.arrow.circlepath")
+            Image(systemName: "checkmark.circle")
                 .resizable()
                 .scaledToFit()
                 .frame(width: 40, height: 40)
-                .foregroundColor(.gradientEnd)
+                .foregroundColor(.green)
 
             VStack(spacing: 5) {
-                Text("O ponto não pode ser batido agora")
+                Text("Seu ponto foi registrado com sucesso!")
                     .fontWeight(.semibold)
                     .font(.headline)
                     .fixedSize(horizontal: false, vertical: true)
@@ -50,9 +50,8 @@ struct CardCheckInWindowClosedView: View {
         
         return "Volte amanhã às 13:30 para bater o seu ponto novamente!"
     }
-
 }
 
 #Preview {
-    CardCheckInWindowClosedView()
+    CardCheckedInView()
 }
