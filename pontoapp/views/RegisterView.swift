@@ -65,52 +65,70 @@ struct RegisterView: View {
             } message: {
                 Text(viewModel.errorMessage ?? "Ocorreu um erro inesperado")
             }
+            .onAppear{
+                viewModel.loadInitialData()
+            }
         }
     }
     
     var registerCommand: some View {
         VStack{
-            Text("Apple Academy")
-                .fontWeight(.semibold)
-                .foregroundColor(.white).opacity(0.9)
-                .font(.system(size: 40))
+            HStack(alignment: .center, spacing: 10){
+                Text("Apple Academy")
+                    .fontWeight(.semibold)
+                    .foregroundColor(.white).opacity(0.9)
+                    .font(.system(size: 30))
+                
+                Image(systemName: "applelogo")
+                    .resizable()
+                    .frame(width: 35, height: 40)
+                    .foregroundStyle(Color.white)
+                    .offset(y: -4)
+            }
             
             Text("SENAC")
                 .fontWeight(.semibold)
                 .foregroundColor(.white).opacity(0.7)
-                .font(.system(size: 30))
+                .font(.system(size: 25))
             
             Spacer()
             
-            CalendarView(){ _ in
-                
+            CalendarView(daysCheckedIn: $viewModel.calendarStatus){ month, year in
+                viewModel.getCalendarInfos(month: month, year: year)
             }
             
             Spacer()
             
-            if isChekcInWindowOpen() {
-                PresenceSlider(profileImage: profileImage, onSwipeRight: {
-                    LocalAuthService().authorizeUser { authenticated in
-                        if authenticated {
-                            if isOnTime() {
-                                viewModel.registerEvent(
-                                    studentId: studentId,
-                                    status: .present,
-                                    location: locationManager.userLocation
-                                )
-                            } else {
-                                justifyLate = true
+            
+            Group{
+                if isChekcInWindowOpen() && !hasAlreadyCheckedInToday(){
+                    PresenceSlider(profileImage: profileImage, onSwipeRight: {
+                        LocalAuthService().authorizeUser { authenticated in
+                            if authenticated {
+                                if isOnTime() {
+                                    viewModel.registerEvent(
+                                        studentId: studentId,
+                                        status: .present,
+                                        location: locationManager.userLocation
+                                    )
+                                } else {
+                                    justifyLate = true
+                                }
                             }
                         }
-                    }
-                    
-                }, onSwipeLeft: {
-                    justifyAbstence = true
-                })
-            } else {
-                CardCheckInWindowClosedView()
+                        
+                    }, onSwipeLeft: {
+                        justifyAbstence = true
+                    })
+                } else if hasAlreadyCheckedInToday() {
+                    CardCheckedInView()
+                } else {
+                    CardCheckInWindowClosedView()
+                }
             }
+            .layoutPriority(1)
             
+
             Spacer()
             
         }
@@ -160,6 +178,10 @@ struct RegisterView: View {
         let nowMinutes = Date.getCurrentMinutes()
 
         return nowMinutes >= beginMinutes && nowMinutes < endMinutes
+    }
+    
+    func hasAlreadyCheckedInToday() -> Bool {
+        return viewModel.isCheckedInToday
     }
     
 }

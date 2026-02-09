@@ -14,9 +14,29 @@ class RegistrationViewModel: ObservableObject {
     @Published var showError: Bool = false
     @Published var showSuccess: Bool = false
     @Published var successMessage: String = ""
+    @Published var calendarStatus: [Int: RecordStatus] = [:]
+    @Published var isCheckedInToday: Bool = false
     
+    private var studentId: String = ""
+
     private let webService = WebService()
     private let dropboxService = DropboxService()
+    
+    init(){
+        getStudentId()
+    }
+    
+    func getStudentId(){
+        self.studentId = UserDefaults.standard.string(forKey: "studentId") ?? ""
+    }
+    
+    func loadInitialData() {
+        let today = Date.now
+
+        if calendarStatus.isEmpty {
+            getCalendarInfos(month: today.month, year: today.year)
+        }
+    }
     
     func registerEvent(studentId: String, status: RecordStatus, location: CLLocation?, justifyText: String? = nil, files: [URL]? = nil){
         guard let location = location else{
@@ -80,6 +100,33 @@ class RegistrationViewModel: ObservableObject {
         }
     }
     
+    func getCalendarInfos(month: Int, year: Int){
+        print("-------- O STUDENT ID É: \(self.studentId) ---------")
+        
+        webService.fetchCalendar(student: self.studentId, month: month, year: year) { [weak self] result in
+            DispatchQueue.main.async {
+                self?.isLoading = false
+                
+                switch result {
+                case .success(let status):
+                    self?.calendarStatus = status
+                    
+                    let now = Date()
+                    if month == now.month && year == now.year {
+                        let todayDay = now.day
+                        
+                        self?.isCheckedInToday = (status[todayDay] != nil)
+                    }
+                    
+                case .failure(let error):
+                    self?.errorMessage = error.localizedDescription
+                    self?.showError = true
+                }
+            }
+            
+        }
+    }
+    
     func sendToAirtable(studentId: String, status: RecordStatus, location: CLLocation, justifyText: String?, fileLinks: [String]?){
         
         let record = RecordModel(
@@ -99,6 +146,7 @@ class RegistrationViewModel: ObservableObject {
                     self?.successMessage = (status == .absent) ? "Falta justificada com sucesso!" : "Presença registrada com sucesso!"
                     self?.showSuccess = true
                     
+                    self?.isCheckedInToday = true
                 case .failure(let error):
                     self?.errorMessage = error.localizedDescription
                     self?.showError = true

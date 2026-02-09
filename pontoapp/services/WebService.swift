@@ -12,6 +12,12 @@ class WebService: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
     
+    let isoFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+    
     let apiKey = Bundle.main.object(forInfoDictionaryKey: "AirtableToken") as? String ?? ""
     
     func postRecord(record: RecordModel, completion: @escaping (Result<Bool, Error>) -> Void) {
@@ -25,7 +31,6 @@ class WebService: ObservableObject {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
-
         
         var fields: [String: Any] = [
             "latitude": record.latitude,
@@ -89,6 +94,57 @@ class WebService: ObservableObject {
         }.resume()
     }
     
+    func fetchCalendar(student: String, month: Int, year: Int, completion: @escaping (Result<[Int: RecordStatus], Error>) -> Void) {
+        let baseURL = "https://api.airtable.com/v0/app4Cut7Wu9GESQDL/Timelog"
+        var components = URLComponents(string: baseURL)
+        
+        components?.queryItems = [
+            URLQueryItem(name: "filterByFormula",value: "AND(SEARCH('\(student)',{student}),MONTH({datetime}) = \(month), YEAR({datetime}) = \(year))")
+        ]
+        
+        guard let url = components?.url else {
+            let error = NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "URL inválida"])
+            completion(.failure(error))
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let data = data else {
+                return
+            }
+            
+            do {
+                let decodedResponse = try JSONDecoder().decode(AirtableCalendarResponse.self, from: data)
+                
+                var calendarInfos: [Int: RecordStatus] = [:]
+                
+                for record in decodedResponse.records {
+                    if let date = self.isoFormatter.date(from: record.fields.datetime) {
+                        let day = Calendar.current.component(.day, from: date)
+                        let status = RecordStatus(rawValue: record.fields.status)
+                        
+                        calendarInfos[day] = status
+                    }
+                }
+                
+                completion(.success(calendarInfos))
+            } catch {
+                print("Erro ao decodificar: \(error)")
+                completion(.failure(error))
+            }
+        }
+        task.resume()
+    }
+    
     func fetchEvents(completion: @escaping (Result<[Event], Error>) -> Void) {
         isLoading = true
         errorMessage = nil
@@ -106,7 +162,10 @@ class WebService: ObservableObject {
         ]
         
         guard let url = components?.url else {
-            isLoading = false
+            DispatchQueue.main.async {
+                self.isLoading = false
+            }
+            
             let error = NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "URL inválida"])
             completion(.failure(error))
             return
@@ -117,28 +176,31 @@ class WebService: ObservableObject {
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         
         URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
-            self?.isLoading = false
+            DispatchQueue.main.async {
+                self?.isLoading = false
 
-            if let error = error {
-                self?.errorMessage = error.localizedDescription
-                completion(.failure(error))
-                return
-            }
-            
-            guard let data = data else {
-                let error = NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Dados não encontrados"])
-                self?.errorMessage = "Dados não encontrados"
-                completion(.failure(error))
-                return
-            }
-            
-            do {
-                let result = try JSONDecoder().decode(AirtableResponse.self, from: data)
-                self?.events = result.records
-                completion(.success(result.records))
-            } catch {
-                self?.errorMessage = "Erro ao processar dados"
-                completion(.failure(error))
+                if let error = error {
+                    self?.errorMessage = error.localizedDescription
+                    completion(.failure(error))
+                    return
+                }
+                
+                guard let data = data else {
+                    let error = NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Dados não encontrados"])
+                    self?.errorMessage = "Dados não encontrados"
+                    completion(.failure(error))
+                    return
+                }
+                
+                do {
+                    let result = try JSONDecoder().decode(AirtableResponse.self, from: data)
+                    self?.events = result.records
+                    completion(.success(result.records))
+                } catch {
+                    self?.errorMessage = "Erro ao processar dados"
+                    completion(.failure(error))
+                }
+
             }
         }.resume()
     }
