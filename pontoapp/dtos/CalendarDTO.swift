@@ -19,11 +19,11 @@ struct Record: Codable{
 
 struct RecordFields: Codable{
     let status: String
-    let datetime: String
+    let createdTime: String
     
     enum CodingKeys: String, CodingKey {
         case status = "Status"
-        case datetime = "datetime"
+        case createdTime = "Created Time"
     }
 }
 
@@ -42,6 +42,8 @@ extension RecordStatus {
             return .red
         case .lated:
             return .yellow // ou .orange
+        case .holiday:
+            return .gray
         }
     }
 }

@@ -7,24 +7,6 @@
 
 import Foundation
 
-struct EnviromentVariables {
-    static var dropboxApiKey: String {
-        return Bundle.main.object(forInfoDictionaryKey: "DropboxKey") as? String ?? ""
-    }
-    
-    static var dropboxAppSecret: String {
-        return Bundle.main.object(forInfoDictionaryKey: "DropboxAppSecret") as? String ?? ""
-    }
-    
-    static var dropboxAcessToken: String {
-        return Bundle.main.object(forInfoDictionaryKey: "DropboxAcessToken") as? String ?? ""
-    }
-    
-    static var dropboxRefreshToken: String {
-        return Bundle.main.object(forInfoDictionaryKey: "DropboxRefreshToken") as? String ?? ""
-    }
-}
-
 class DropboxService {
     private let apiKey = EnviromentVariables.dropboxApiKey
     private let appSecret = EnviromentVariables.dropboxAppSecret
@@ -54,7 +36,7 @@ class DropboxService {
         }.resume()
     }
     
-    func uploadFileAndGetLink(fileData: Data, fileName: String, completion: @escaping(String?) -> Void) {
+    func uploadFileAndGetLink(studentId: String, studentName: String, fileData: Data, fileName: String, completion: @escaping(String?) -> Void) {
         print("Inicio do envio de arquivos para o dropbox")
         
         getRefreshToken { newAccessToken in
@@ -64,7 +46,7 @@ class DropboxService {
                 return
             }
             
-            self.uploadFile(token: token, data: fileData, fileName: fileName) { path in
+            self.uploadFile(studentId: studentId, studentName: studentName, token: token, data: fileData, fileName: fileName) { path in
                 guard let path = path else {
                     print("ERRO AO SUBIR ARQUIVO NO DROPBOX")
                     completion(nil)
@@ -80,29 +62,37 @@ class DropboxService {
         }
     }
     
-    private func uploadFile(token: String , data: Data, fileName: String, completion: @escaping(String?) -> Void) {
+    private func uploadFile(studentId: String, studentName: String, token: String , data: Data, fileName: String, completion: @escaping(String?) -> Void) {
         let url = URL(string: "https://content.dropboxapi.com/2/files/upload")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue("application/octet-stream", forHTTPHeaderField: "Content-Type")
         
-        let uniquePath = "\(UUID().uuidString)_\(fileName)"
+        let uniqueFileName = "\(UUID().uuidString)_\(fileName)"
+
+        let sanitizedName = studentName.trimingWhitespaces()
+        let fullPath = "/\(Date.classDurationInYears())/\(sanitizedName)-\(studentId)/\(uniqueFileName)"
+
         let args: [String: Any] = [
-            "path": "/\(uniquePath)",
+            "path": fullPath,
             "mode": "add",
             "autorename": true,
             "mute": false
         ]
-        
+
         if let jsonData = try? JSONSerialization.data(withJSONObject: args, options: []),
-            let jsonString = String(data: jsonData, encoding: .utf8) {
-                request.setValue(jsonString, forHTTPHeaderField: "Dropbox-API-Arg")
+           let jsonString = String(data: jsonData, encoding: .utf8) {
+               request.setValue(jsonString, forHTTPHeaderField: "Dropbox-API-Arg")
         }
         
         request.httpBody = data
         
         URLSession.shared.dataTask(with: request) { (data, response, error) in
+            if let httpResponse = response as? HTTPURLResponse {
+                print("Status code: \(httpResponse.statusCode)")
+            }
+            
             guard let data = data, error == nil else {
                 completion(nil)
                 return

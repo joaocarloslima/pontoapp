@@ -1,59 +1,94 @@
 import SwiftUI
 
+struct SliderFramePreferenceKey: PreferenceKey {
+    static var defaultValue: CGRect = .zero
+    static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
+        value = nextValue()
+    }
+}
+
 struct RegisterView: View {
     
     @AppStorage("studentId") private var studentId: String = "k"
+    @AppStorage("hasCompletedTutorial") private var hasCompletedTutorial: Bool = false
+    @AppStorage("hasCompletedFirstCheckIn") private var hasCompletedFirstCheckIn: Bool = false
     
     @State private var justifyAbstence: Bool = false
     @State private var justifyLate: Bool = false
     @State private var showSettings = false
     
-    @StateObject private var viewModel = RegistrationViewModel()
+    @State private var sliderFrame: CGRect = .zero
+    @State private var tutorialVisible: Bool = !UserDefaults.standard.bool(forKey: "hasCompletedTutorial")
+    @State private var windowTicker = Timer.publish(every: 10, on: .main, in: .common).autoconnect()
+
+    @EnvironmentObject private var viewModel: RegistrationViewModel
     @ObservedObject var locationManager = LocationManager.shared
+    @ObservedObject var beaconManager = BeaconManager.shared
+    @ObservedObject var bluetoothManager = BluetoothManager.shared
     @StateObject var profileController = ProfileController()
-    
+
     private var profileImage: Image? {
-        if let profileImage = profileController.profileImage {
-            return profileImage
-        } else {
-            return Image(systemName: "person.circle.fill")
-        }
+        profileController.profileImage ?? Image(systemName: "person.circle.fill")
     }
-    
-    private let maxDragOffset: CGFloat = 150
     
     var body: some View {
         if studentId.isEmpty {
             noStudentIdView
         } else {
             ZStack {
-                VStack(spacing: 20){
+                VStack(spacing: 20) {
                     registerCommand
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color.bg950)
+                .disabled(tutorialVisible)
+                .onAppear{
+                    print("VALOR DO HASCOMPLETEDTUTORIAL: \(hasCompletedTutorial)")
+                    print("SLIDER FRAME É IGUAL A ZERO? \(sliderFrame == .zero)")
+                }
+                                
+                if !hasCompletedTutorial && sliderFrame != .zero {
+                    OnboardingOverlayView(
+                        hasCompletedTutorial: $hasCompletedTutorial,
+                        sliderFrame: sliderFrame
+                    )
+                }
             }
-            .navigationDestination(isPresented: $justifyLate){
-                JustifyView(titleText: "Justificar Atraso", subtitleText: "MOTIVO DE SEU ATRASO"){ text, files in
-                    
-                    viewModel.registerEvent(
+            .coordinateSpace(name: "registerView")
+            .toolbar(tutorialVisible ? .hidden : .visible, for: .tabBar)
+            .onChange(of: hasCompletedTutorial) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                    withAnimation(.easeOut(duration: 0.4)) {
+                        tutorialVisible = false
+                    }
+                }
+            }
+            .navigationTitle("Registros")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .navigationDestination(isPresented: $justifyLate) {
+                JustifyView(titleText: "Justificar Atraso", subtitleText: "Motivo de seu atraso:") { text, attachments in
+                    viewModel.requestCheckIn(
                         studentId: studentId,
                         status: .lated,
                         location: locationManager.userLocation,
                         justifyText: text,
-                        files: files
+                        attachments: attachments
                     )
-                    justifyLate = false                }
+                    
+                    justifyLate = false
+                }
             }
-            .navigationDestination(isPresented: $justifyAbstence){
-                JustifyView(titleText: "Justificar Ausência", subtitleText: "MOTIVO DA SUA AUSÊNCIA"){ text, files in
-                    viewModel.registerEvent(
+            .navigationDestination(isPresented: $justifyAbstence) {
+                JustifyView(titleText: "Justificar Ausência", subtitleText: "Motivo de sua ausência:") { text, attachments in
+                    viewModel.requestCheckIn(
                         studentId: studentId,
                         status: .absent,
                         location: locationManager.userLocation,
                         justifyText: text,
-                        files: files
+                        attachments: attachments
                     )
+                    
                     justifyAbstence = false
                 }
             }
@@ -65,76 +100,174 @@ struct RegisterView: View {
             } message: {
                 Text(viewModel.errorMessage ?? "Ocorreu um erro inesperado")
             }
-            .onAppear{
-                viewModel.loadInitialData()
+            .alert("Fora da Academy", isPresented: $viewModel.showOutsideAcademyAlert) {
+                Button("Registrar mesmo assim", role: .destructive) {
+                    viewModel.confirmCheckInOutsideAcademy()
+                }
+                Button("Cancelar", role: .cancel) {
+                    viewModel.cancelCheckIn()
+                }
+            } message: {
+                Text("Você parece estar fora da Apple Developer Academy. Deseja registrar o ponto mesmo assim?")
+            }
+            .alert("Bluetooth Desligado", isPresented: $viewModel.showBluetoothAlert){
+                Button("Abrir Ajustes") {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                }
+                
+                Button("Cancelar", role: .cancel) { }
+            } message: {
+                Text("Para você poder bater seu ponto, o seu Bluetooth deve estar ligado.")
+            }
+            .onAppear {
+                viewModel.resetToCurrentMonth()
+                beaconManager.startMonitoring()
             }
         }
     }
     
     var registerCommand: some View {
-        VStack{
-            HStack(alignment: .center, spacing: 10){
-                Text("Apple Academy")
-                    .fontWeight(.semibold)
-                    .foregroundColor(.white).opacity(0.9)
-                    .font(.system(size: 30))
+        VStack {
+            Spacer()
+            
+            CalendarView(
+                currentDate: $viewModel.currentCalendarDate,
+                daysCheckedIn: $viewModel.calendarStatus,
+                daysWithEvents: $viewModel.daysWithEvents) { month, year in
+                    viewModel.getCalendarInfos(month: month, year: year)
+                } onDateSelected: { date in
+                    viewModel.fetchDayDetail(date: date)
+                }
+                .overlay {
+                    if viewModel.isLoadingCalendar {
+                        RoundedRectangle(cornerRadius: 15)
+                            .fill(Color.black.opacity(0.3))
+                            .overlay(
+                                ProgressView()
+                                    .tint(.gradientStart)
+                            )
+                    }
+                }
+                .sheet(item: $viewModel.selectedDayDetail){ detail in
+                    DayDetailSheet(detail: detail)
+                }
+            
+            Spacer()
+            
+            Group {
+                checkInContent
+            }
+            .layoutPriority(1)
+            .padding(.bottom, tutorialVisible ? 150 : 0)
+            .onAppear {
+                Task { await viewModel.loadCheckInWindowState() }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+                Task { await viewModel.loadCheckInWindowState() }
+            }
+            .onReceive(windowTicker) { _ in
+                viewModel.recomputeWindowState()
+            }
+            
+            Spacer()
+        }
+    }
+    
+    @ViewBuilder
+    var checkInContent: some View {
+        if viewModel.hasAlreadyCheckedInToday() {
+            CardCheckedInView(text: viewModel.nextValidDayMessage(alreadyCheckedIn: true))
+            
+        } else if !hasCompletedFirstCheckIn || viewModel.checkInWindowState == .open {
+            PresenceSlider(profileImage: profileImage, onSwipeRight: {
                 
-                Image(systemName: "applelogo")
-                    .resizable()
-                    .frame(width: 35, height: 40)
-                    .foregroundStyle(Color.white)
-                    .offset(y: -4)
-            }
-            
-            Text("SENAC")
-                .fontWeight(.semibold)
-                .foregroundColor(.white).opacity(0.7)
-                .font(.system(size: 25))
-            
-            Spacer()
-            
-            CalendarView(daysCheckedIn: $viewModel.calendarStatus){ month, year in
-                viewModel.getCalendarInfos(month: month, year: year)
-            }
-            
-            Spacer()
-            
-            
-            Group{
-                if isChekcInWindowOpen() && !hasAlreadyCheckedInToday(){
-                    PresenceSlider(profileImage: profileImage, onSwipeRight: {
-                        LocalAuthService().authorizeUser { authenticated in
-                            if authenticated {
-                                if isOnTime() {
-                                    viewModel.registerEvent(
+            #if !targetEnvironment(simulator)
+                guard bluetoothManager.isBluetoothTurnedOn else {
+                    viewModel.showBluetoothAlert = true
+                    return
+                }
+            #endif
+                LocalAuthService().authorizeUser { authenticated in
+                    guard authenticated else { return }
+                    
+                    Task {
+                        let result = await viewModel.validateWithServerTime()
+                        await MainActor.run {
+                            switch result {
+                            case .onTime:
+                                viewModel.requestCheckIn(
+                                    studentId: studentId,
+                                    status: .present,
+                                    location: locationManager.userLocation
+                                )
+                                
+                            case .late:
+                                if !hasCompletedFirstCheckIn {
+                                    viewModel.requestCheckIn(
                                         studentId: studentId,
                                         status: .present,
-                                        location: locationManager.userLocation
+                                        location: locationManager.userLocation,
+                                        justifyText: "Primeiro check-in realizado usando o aplicativo de presença - Stemp"
                                     )
+                                    hasCompletedFirstCheckIn = true
+                                    
                                 } else {
                                     justifyLate = true
                                 }
+                                
+                            case .outsideWindow:
+                                if !hasCompletedFirstCheckIn {
+                                    viewModel.requestCheckIn(
+                                        studentId: studentId,
+                                        status: .present,
+                                        location: locationManager.userLocation,
+                                        justifyText: "Primeiro check-in realizado usando o aplicativo de presença - Stemp"
+                                    )
+                                    hasCompletedFirstCheckIn = true
+                                } else {
+                                    viewModel.errorMessage = "Fora do horário permitido (13:40–18:00)"
+                                    viewModel.showError = true
+                                }
+                            case .invalidDay:
+                                viewModel.errorMessage = "Não é um dia válido para registro."
+                                viewModel.showError = true
+                                
+                            case .error:
+                                viewModel.errorMessage = "Erro ao verificar horário. Verifique sua conexão."
+                                viewModel.showError = true
                             }
                         }
-                        
-                    }, onSwipeLeft: {
-                        justifyAbstence = true
-                    })
-                } else if hasAlreadyCheckedInToday() {
-                    CardCheckedInView()
-                } else {
-                    CardCheckInWindowClosedView()
+                    }
                 }
+            }, onSwipeLeft: {
+                LocalAuthService().authorizeUser { authenticated in
+                    guard authenticated else { return }
+                    justifyAbstence = true
+                }
+            })
+            .onGeometryChange(for: CGRect.self) { proxy in
+                proxy.frame(in: .named("registerView"))
+            } action: { newFrame in
+                print("📍 Slider frame: \(newFrame)")
+                guard newFrame != .zero else { return }
+                sliderFrame = newFrame
             }
+            //.padding(.bottom, tutorialVisible ? 70 : 0)
             .layoutPriority(1)
             
-
-            Spacer()
-            
+        } else {
+            switch viewModel.checkInWindowState {
+            case .loading:
+                ProgressView()
+                    .tint(.gradientStart)
+                    .frame(maxWidth: .infinity)
+            default:
+                CardCheckInWindowClosedView(text: viewModel.nextValidDayMessage())
+            }
         }
-        
     }
-    
     
     var noStudentIdView: some View {
         VStack(spacing: 30) {
@@ -154,8 +287,6 @@ struct RegisterView: View {
                 .foregroundColor(.white.opacity(0.7))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
-            
-                .padding(.horizontal, 40)
                 .padding(.top, 20)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -164,28 +295,9 @@ struct RegisterView: View {
             SettingsView()
         }
     }
-        
-    func isOnTime() -> Bool {
-        //limite é 14:10
-        let endMinutes: Int = 14 * 60 + 10
-        return Date.getCurrentMinutes() <= endMinutes
-    }
-    
-    func isChekcInWindowOpen() -> Bool {
-        let beginMinutes: Int = 13 * 60 + 30
-        let endMinutes: Int = 18 * 60
-        
-        let nowMinutes = Date.getCurrentMinutes()
-
-        return nowMinutes >= beginMinutes && nowMinutes < endMinutes
-    }
-    
-    func hasAlreadyCheckedInToday() -> Bool {
-        return viewModel.isCheckedInToday
-    }
-    
 }
 
 #Preview {
-    RegisterView( )
+    RegisterView()
+        .environmentObject(RegistrationViewModel())
 }

@@ -7,16 +7,39 @@
 
 import Foundation
 
-struct AirtableResponse: Codable {
-    let records: [Event]
+struct AirtableResponse<Fields: Decodable>: Decodable {
+    let records: [AirtableRecord<Fields>]
+    let offset: String?
 }
 
-struct Event: Codable, Identifiable {
+struct AirtableRecord<Fields: Decodable>: Decodable, Identifiable {
     let id: String
-    let fields: EventFields
+    let fields: Fields
     let createdTime: String
 }
 
+struct StudentRecord: Codable, Identifiable {
+    let appleID: String
+    let name: String
+    let memojiURL: [String]
+    let email: String
+    
+    var id: String {
+        return appleID
+    }
+}
+
+struct VacationDate: Codable{
+    let title: String?
+    let beginDate: String?
+    let endDate: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case title = "Title"
+        case beginDate = "Begin Date"
+        case endDate = "End Date"
+    }
+}
 
 struct EventFields: Codable {
     let name: String
